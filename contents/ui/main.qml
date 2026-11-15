@@ -990,6 +990,7 @@ PlasmoidItem {
         repeat: true
         triggeredOnStart: true
         onTriggered: {
+            root.loadNotes() // <--- Dodato automatsko učitavanje beleški iz baze
             root.checkReminders()
             root.checkExpiredDoneNotes()
         }
