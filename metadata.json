@@ -14,7 +14,7 @@
     ],
     "Category": "Productivity",
     "License": "GPL-3.0-or-later",
-    "Version": "1.1.4",
+    "Version": "1.1.5",
     "Website": "https://www.kde.org"
   },
   "KPackageStructure": "Plasma/Applet",
