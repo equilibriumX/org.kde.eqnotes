@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kcfg xmlns="http://www.kde.org/standards/kcfg/1.0"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0
+      https://www.kde.org/standards/kcfg/1.0/kcfg.xsd">
+  <kcfgfile name="" />
+  <group name="Appearance">
+    <entry name="stickerPalette" type="String">
+      <default>pastel</default>
+    </entry>
+    <entry name="stickerTextColor" type="String">
+      <default>default</default>
+    </entry>
+    <entry name="stickerRadius" type="Int">
+      <default>8</default>
+    </entry>
+    <entry name="stickerRotation" type="Bool">
+      <default>true</default>
+    </entry>
+    <entry name="stickerShadow" type="Bool">
+      <default>true</default>
+    </entry>
+    <entry name="stickerRandomOffset" type="Bool">
+      <default>true</default>
+    </entry>
+  </group>
+  <group name="General">
+    <entry name="defaultImportance" type="Int">
+      <default>1</default>
+    </entry>
+  </group>
+  <group name="Behavior">
+    <entry name="newNoteAlwaysOnTop" type="Bool">
+      <default>true</default>
+    </entry>
+  </group>
+</kcfg>

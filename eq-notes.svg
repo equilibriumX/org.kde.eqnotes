@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <defs>
+
+       <linearGradient id="bg" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#1f48b8" />
+      <stop offset="1" stop-color="#123030" />
+    </linearGradient>
+  </defs>
+    <!-- Zaobljena pozadina -->
+  <rect x="2" y="2" width="124" height="124" rx="23" fill="url(#bg)" />
+  <g stroke-width="1.4">
+
+  </g>
+    <circle cx="64" cy="64" r="40" fill="url(#highlight)" />
+
+  <!-- Gornji svetlosni odsjaj -->
+  <path d="
+    M 35 43
+    C 39 30, 52 24, 64 25
+    C 53 28, 43 36, 39 48
+    C 36 54, 32 53, 35 43 Z" fill="#FFFFFF" opacity="0.28" />
+
+  <!-- Donja refleksija -->
+  <path d="
+    M 31 79
+    C 40 103, 76 111, 96 88
+    C 84 108, 53 114, 34 96 Z" fill="#FFFFFF" opacity="0.12" />
+    <!-- EQ lettering -->
+  <text x="8" y="30" fill="#152020" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" font-weight="700" letter-spacing="-2">hay</text>
+  <text x="68" y="30" fill="#152020" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" font-weight="700" letter-spacing="-2">best</text>
+  <text x="75" y="110" fill="#152020" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" font-weight="700" letter-spacing="-2">hallo</text>
+    <text x="75" y="110" fill="#113020" font-family="DejaVu Sans, Arial, sans-serif" font-size="120" font-weight="700" letter-spacing="-2">h</text>
+      <text x="26" y="80" fill="#152020" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" font-weight="700" letter-spacing="-2">EQ-Notes</text>
+</svg>

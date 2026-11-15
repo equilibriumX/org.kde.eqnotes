@@ -1,0 +1,22 @@
+{
+  "KPlugin": {
+    "Id": "org.kde.eqnotes",
+    "Name": "EQ-Notes",
+    "Description": "Notes, tasks, and local reminders",
+    "Icon": "accessories-text-editor",
+    "Authors": [
+      {
+                "Email": "saradnja.barnak@gmail.com",
+                "Name": "Barnak Zlatko",
+                "Project": "EQuilibriumOS"
+
+            }
+    ],
+    "Category": "Productivity",
+    "License": "GPL-3.0-or-later",
+    "Version": "1.1.4",
+    "Website": "https://www.kde.org"
+  },
+  "KPackageStructure": "Plasma/Applet",
+  "X-Plasma-API-Minimum-Version": "6.0"
+}
