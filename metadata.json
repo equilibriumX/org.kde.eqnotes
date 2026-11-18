@@ -6,15 +6,14 @@
     "Icon": "accessories-text-editor",
     "Authors": [
       {
-                "Email": "saradnja.barnak@gmail.com",
-                "Name": "Barnak Zlatko",
-                "Project": "EQuilibriumOS"
-
-            }
+        "Email": "saradnja.barnak@gmail.com",
+        "Name": "Barnak Zlatko",
+        "Project": "EQuilibriumOS"
+      }
     ],
     "Category": "Productivity",
     "License": "GPL-3.0-or-later",
-    "Version": "1.1.5",
+    "Version": "1.2.1",
     "Website": "https://www.kde.org"
   },
   "KPackageStructure": "Plasma/Applet",

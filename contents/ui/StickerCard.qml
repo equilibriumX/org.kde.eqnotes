@@ -85,6 +85,13 @@ Item {
         border.color: root.selectedId === modelData.id ? root.accentColor : Qt.rgba(0, 0, 0, 0.16)
     }
 
+    MouseArea {
+        anchors.fill: parent
+        anchors.rightMargin: 24
+        cursorShape: Qt.PointingHandCursor
+        onClicked: root.openFloatingNote(modelData)
+    }
+
     ColumnLayout {
         id: stickerContentCol
         anchors.left: parent.left
@@ -112,6 +119,18 @@ Item {
                 font.bold: true
                 Layout.fillWidth: true
                 elide: Text.ElideRight
+            }
+
+            Controls.ToolButton {
+                text: modelData.pinned ? "📌" : "⌖"
+                font.pixelSize: 12
+                implicitWidth: 24
+                implicitHeight: 22
+                padding: 0
+                display: Controls.AbstractButton.TextOnly
+                Controls.ToolTip.visible: hovered
+                Controls.ToolTip.text: modelData.pinned ? "Unpin from desktop" : "Pin to desktop"
+                onClicked: root.requestTogglePin(modelData)
             }
 
             Rectangle {
@@ -162,10 +181,4 @@ Item {
         }
     }
 
-    MouseArea {
-        anchors.fill: parent
-        anchors.rightMargin: 24
-        cursorShape: Qt.PointingHandCursor
-        onClicked: root.openFloatingNote(modelData)
-    }
 }

@@ -25,10 +25,157 @@ import QtQuick.LocalStorage as LocalStorage
 import org.kde.notification as KDENotification
 import org.kde.plasma.plasmoid
 import org.kde.plasma.core as PlasmaCore
+import org.kde.plasma.plasma5support as Plasma5Support
 import org.kde.kirigami as Kirigami
 
 PlasmoidItem {
     id: root
+
+    Plasma5Support.DataSource {
+        id: plasmaCommand
+        engine: "executable"
+        connectedSources: []
+        onNewData: function(source, data) {
+            disconnectSource(source)
+        }
+        function exec(command) {
+            connectSource(command)
+        }
+    }
+
+    function shellQuote(value) {
+        return "'" + String(value).replace(/'/g, "'\\''") + "'"
+    }
+
+    function runPlasmaScript(script) {
+        // Plasma 6 exposes desktop widget creation through its scripting API.
+        var command = "qdbus6 org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript " + shellQuote(script)
+        plasmaCommand.exec(command)
+    }
+
+    function syncDesktopStickers() {
+        if (!databaseReady) return
+
+        var pinned = []
+        for (var i = 0; i < notes.length; ++i) {
+            if (notes[i].pinned) {
+                pinned.push({
+                    noteId: String(notes[i].id),
+                    title: String(notes[i].title),
+                    body: String(notes[i].body),
+                    created: Number(notes[i].created),
+                    importance: Number(notes[i].importance),
+                    done: Boolean(notes[i].done),
+                    palette: String(Plasmoid.configuration.stickerPalette || "pastel"),
+                    textColor: String(Plasmoid.configuration.stickerTextColor || "default"),
+                    radius: Number(Plasmoid.configuration.stickerRadius || 8),
+                    shadow: Boolean(Plasmoid.configuration.stickerShadow),
+                    rotation: Boolean(Plasmoid.configuration.stickerRotation),
+                    randomOffset: Boolean(Plasmoid.configuration.stickerRandomOffset)
+                })
+            }
+        }
+
+        var payload = JSON.stringify(pinned)
+var script = "(function(){"
+    + "const plugin='org.kde.eqnotes.sticker';"
+    + "const notes=" + payload + ";"
+    + "const byId={}; notes.forEach(n=>byId[String(n.noteId)]=n);"
+    + "const found={};"
+    + "desktops().forEach(d=>{"
+    + "d.widgets(plugin).forEach(w=>{"
+    + "w.currentConfigGroup=['General'];"
+    + "const id=String(w.readConfig('noteId',''));"
+    + "if(!id)return;"
+    + "const n=byId[id];"
+    + "if(!n){w.remove();return;}"
+    + "found[id]=true;"
+    + "Object.keys(n).forEach(k=>w.writeConfig(k,n[k]));"
+    + "w.reloadConfig();"
+    + "});"
+    + "});"
+    + "notes.forEach((n,i)=>{if(found[String(n.noteId)])return;"
+    + "const ds=desktops(); if(!ds.length)return;"
+    + "const d=ds[0];"
+    + "const w=d.addWidget(plugin,90+(i%5)*34,90+(i%5)*28,230,150);"
+    + "w.currentConfigGroup=['General'];"
+    + "Object.keys(n).forEach(k=>w.writeConfig(k,n[k]));"
+    + "w.reloadConfig();"
+    + "});"
+    + "})();"
+        runPlasmaScript(script)
+    }
+
+    function togglePin(note) {
+        if (!db || !note) return
+        var nextState = note.pinned ? 0 : 1
+        try {
+            db.transaction(function(tx) {
+                tx.executeSql("UPDATE notes SET pinned=? WHERE id=?", [nextState, Number(note.id)])
+            })
+            loadNotes()
+            statusMessage = nextState ? "Sticker pinned to desktop" : "Sticker unpinned"
+        } catch (e) {
+            statusMessage = "Error changing sticker pin"
+        }
+    }
+    PlasmaCore.Dialog {
+        id: stickerDependencyDialog
+        visible: false
+        flags: Qt.Window
+        location: PlasmaCore.Types.Floating
+        type: PlasmaCore.Dialog.Dialog
+
+        mainItem: Rectangle {
+            implicitWidth: 410
+            implicitHeight: 190
+            color: Kirigami.Theme.backgroundColor
+            radius: 12
+            border.width: 1
+            border.color: Kirigami.Theme.disabledTextColor
+
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: 20
+                spacing: 12
+
+                Controls.Label {
+                    text: "Desktop Sticker Required"
+                    font.bold: true
+                    font.pixelSize: 18
+                    color: Kirigami.Theme.textColor
+                    Layout.fillWidth: true
+                }
+
+                Controls.Label {
+                    text: "Install EQ-Notes Desktop Sticker to pin notes to your desktop."
+                    wrapMode: Text.WordWrap
+                    color: Kirigami.Theme.textColor
+                    Layout.fillWidth: true
+                }
+
+                Item { Layout.fillHeight: true }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    Item { Layout.fillWidth: true }
+                    Controls.Button {
+                        text: "Cancel"
+                        onClicked: stickerDependencyDialog.visible = false
+                    }
+                    Controls.Button {
+                        text: "Download Desktop Sticker"
+                        highlighted: true
+                        onClicked: {
+                            Qt.openUrlExternally(root.desktopStickerStoreUrl)
+                            stickerDependencyDialog.visible = false
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     preferredRepresentation: PlasmoidItem.FullRepresentation
 
     toolTipMainText: "EQ-Notes"
@@ -36,6 +183,37 @@ PlasmoidItem {
 
     property var db: null
     property var notes: []
+    property var pendingPinNote: null
+    property bool stickerDependencyCheckPending: false
+    property string desktopStickerStoreUrl: "https://store.kde.org/p/2382171/"
+
+    Plasma5Support.DataSource {
+        id: stickerDependencyCommand
+        engine: "executable"
+        connectedSources: []
+        onNewData: function(source, data) {
+            disconnectSource(source)
+            root.stickerDependencyCheckPending = false
+            if (String(data.stdout || "").indexOf("EQSTICKER_INSTALLED") !== -1) {
+                if (root.pendingPinNote) root.togglePin(root.pendingPinNote)
+            } else {
+                stickerDependencyDialog.visible = true
+            }
+            root.pendingPinNote = null
+        }
+    }
+
+    function requestTogglePin(note) {
+        if (!note) return
+        if (note.pinned) {
+            togglePin(note)
+            return
+        }
+        if (stickerDependencyCheckPending) return
+        pendingPinNote = note
+        stickerDependencyCheckPending = true
+        stickerDependencyCommand.connectSource("kpackagetool6 --type Plasma/Applet --show org.kde.eqnotes.sticker >/dev/null 2>&1 && echo EQSTICKER_INSTALLED || echo EQSTICKER_MISSING")
+    }
     property int selectedId: -1
     property string editorText: ""
 
@@ -235,7 +413,96 @@ PlasmoidItem {
         root.editMode = false
         root.noteWindowOpen = true
     }
+function processStickerOpenRequests() {
+    if (!db || !databaseReady)
+        return
 
+    var requestedNoteId = -1
+
+    try {
+        db.transaction(function(tx) {
+            tx.executeSql(
+                "CREATE TABLE IF NOT EXISTS sticker_open_requests (" +
+                "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                "note_id INTEGER NOT NULL, " +
+                "requested_at INTEGER NOT NULL)"
+            )
+
+            var result = tx.executeSql(
+                "SELECT id, note_id FROM sticker_open_requests ORDER BY id ASC LIMIT 1"
+            )
+
+            if (result.rows.length > 0) {
+                var request = result.rows.item(0)
+
+                requestedNoteId = Number(request.note_id)
+
+                tx.executeSql(
+                    "DELETE FROM sticker_open_requests WHERE id = ?",
+                    [Number(request.id)]
+                )
+            }
+        })
+
+        if (requestedNoteId < 0)
+            return
+
+        for (var i = 0; i < notes.length; ++i) {
+            if (Number(notes[i].id) === requestedNoteId) {
+                root.expanded = true
+                root.openFloatingNote(notes[i])
+                break
+            }
+        }
+    } catch (e) {
+        console.log("EQ-Notes: sticker request error: " + e)
+    }
+}
+function processStickerUnpinRequests() {
+    if (!db || !databaseReady)
+        return
+
+    var changed = false
+
+    try {
+        db.transaction(function(tx) {
+            tx.executeSql(
+                "CREATE TABLE IF NOT EXISTS sticker_unpin_requests (" +
+                "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                "note_id INTEGER NOT NULL, " +
+                "requested_at INTEGER NOT NULL)"
+            )
+
+            var rs = tx.executeSql(
+                "SELECT id, note_id FROM sticker_unpin_requests"
+            )
+
+            for (var i = 0; i < rs.rows.length; ++i) {
+                var request = rs.rows.item(i)
+
+                tx.executeSql(
+                    "UPDATE notes SET pinned = 0 WHERE id = ?",
+                    [Number(request.note_id)]
+                )
+
+                tx.executeSql(
+                    "DELETE FROM sticker_unpin_requests WHERE id = ?",
+                    [Number(request.id)]
+                )
+
+                changed = true
+            }
+        })
+
+        if (changed) {
+            loadNotes()
+            statusMessage = "Sticker removed from desktop"
+        }
+
+    } catch (e) {
+        console.log("EQ-Notes: unpin request error: " + e)
+    }
+}
     function closeFloatingNote() {
         root.noteWindowOpen = false
         root.editMode = false
@@ -780,6 +1047,9 @@ PlasmoidItem {
                 try {
                     tx.executeSql("ALTER TABLE notes ADD COLUMN completed_at INTEGER DEFAULT 0")
                 } catch(e) {}
+                try {
+                    tx.executeSql("ALTER TABLE notes ADD COLUMN pinned INTEGER DEFAULT 0")
+                } catch(e) {}
             })
             databaseReady = true
             statusMessage = ""
@@ -811,11 +1081,13 @@ PlasmoidItem {
                         reminderAt: Number(r.reminder_at || 0),
                         dueAt: Number(r.due_at || 0),
                         importance: Number(r.importance || 1),
-                        completedAt: Number(r.completed_at || 0)
+                        completedAt: Number(r.completed_at || 0),
+                        pinned: Number(r.pinned || 0) === 1
                     })
                 }
             })
             notes = rows
+            syncDesktopStickers()
             if (selectedId >= 0) {
                 for (var j = 0; j < notes.length; ++j) {
                     if (Number(notes[j].id) === Number(selectedId)) {
@@ -995,4 +1267,14 @@ PlasmoidItem {
             root.checkExpiredDoneNotes()
         }
     }
+Timer {
+    interval: 500
+    running: root.databaseReady
+    repeat: true
+
+    onTriggered: {
+        root.processStickerOpenRequests()
+        root.processStickerUnpinRequests()
+    }
+}
 }
